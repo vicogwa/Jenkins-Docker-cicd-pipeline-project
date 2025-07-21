@@ -123,7 +123,7 @@ pipeline {
             steps {
                 script {
                     echo '🔗 Running integration tests...'
-                    sh """
+                    sh '''
                         for i in {1..5}; do
                             response=\$(curl -s http://localhost:${params.APP_PORT}/)
                             echo "Response: \$response"
@@ -139,7 +139,7 @@ pipeline {
 
                         echo "❌ Integration test failed after all attempts!"
                         exit 1
-                    """
+                    '''
                 }
             }
         }
