@@ -120,30 +120,29 @@ pipeline {
         }
 
         stage('Integration Tests') {
-            steps {
-                script {
-                    echo '🔗 Running integration tests...'
-                    sh '''
-                        for i in {1..5}; do
-                            response=\$(curl -s http://localhost:${params.APP_PORT}/)
-                            echo "Response: \$response"
+    steps {
+        script {
+            echo '🔗 Running integration tests...'
+            sh """
+                for i in {1..5}; do
+                    response=\\$(curl -s http://localhost:${params.APP_PORT}/)
+                    echo "Response: \\$response"
 
-                            if echo \"\$response\" | grep -q "Hello from CI/CD Pipeline!"; then
-                                echo "✅ Integration test passed!"
-                                exit 0
-                            else
-                                echo "❌ Integration test failed on attempt \$i, retrying..."
-                                sleep 3
-                            fi
-                        done
+                    if echo \"\\$response\" | grep -q "Hello from CI/CD Pipeline!"; then
+                        echo "✅ Integration test passed!"
+                        exit 0
+                    else
+                        echo "❌ Integration test failed on attempt \\$i, retrying..."
+                        sleep 3
+                    fi
+                done
 
-                        echo "❌ Integration test failed after all attempts!"
-                        exit 1
-                    '''
-                }
-            }
+                echo "❌ Integration test failed after all attempts!"
+                exit 1
+            """
         }
-
+    }
+}
         stage('Push to Docker Registry') {
             when {
                 expression { params.PUSH_TO_REGISTRY }
