@@ -1,14 +1,14 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0' // Use a stable Docker CLI image
+            image 'docker:24.0' // Stable Docker CLI image
             args '-v /var/run/docker.sock:/var/run/docker.sock --group-add docker'
         }
     }
 
     options {
         timestamps()
-        buildDiscarder(logRotator(numToKeepStr: '10')) // Keep last 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10')) // Retain only last 10 builds
     }
 
     parameters {
@@ -61,8 +61,8 @@ pipeline {
                 script {
                     echo '🧪 Running unit tests in container...'
                     sh """
-                        docker run --rm -v $(pwd)/test-results:/app/test-results \\
-                        ${IMAGE_TAG} \\
+                        docker run --rm -v $(pwd)/test-results:/app/test-results \
+                        ${IMAGE_TAG} \
                         bash -c "cd /app && python -m pytest tests/ -v --junitxml=test-results/test-results.xml"
                     """
                 }
@@ -88,7 +88,7 @@ pipeline {
                 script {
                     echo '🔒 Running security scan (Trivy)...'
                     sh """
-                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\
+                        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
                         aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL ${IMAGE_TAG} || true
                     """
                 }
@@ -103,8 +103,8 @@ pipeline {
                         docker stop test-app || true
                         docker rm test-app || true
 
-                        docker run -d --name test-app -p ${params.APP_PORT}:${params.APP_PORT} \\
-                        -e ENV=test -e APP_VERSION=${BUILD_NUMBER} \\
+                        docker run -d --name test-app -p ${params.APP_PORT}:${params.APP_PORT} \
+                        -e ENV=test -e APP_VERSION=${BUILD_NUMBER} \
                         ${IMAGE_TAG}
                     """
                     retry(5) {
@@ -114,7 +114,7 @@ pipeline {
                             curl -f http://localhost:${params.APP_PORT}/health
                         """
                     }
-                    echo '✅ Application deployed successfully!'
+                    echo "✅ Application deployed successfully on port ${params.APP_PORT}!"
                 }
             }
         }
@@ -123,19 +123,23 @@ pipeline {
             steps {
                 script {
                     echo '🔗 Running integration tests...'
-                    retry(5) {
-                        sh """
-                            response=$(curl -s http://localhost:${params.APP_PORT}/ || echo "curl_failed")
-                            echo "Response: $response"
+                    sh """
+                        for i in {1..5}; do
+                            response=\$(curl -s http://localhost:${params.APP_PORT}/)
+                            echo "Response: \$response"
 
-                            if echo "$response" | grep -q "Hello from CI/CD Pipeline!"; then
+                            if echo \"\$response\" | grep -q "Hello from CI/CD Pipeline!"; then
                                 echo "✅ Integration test passed!"
+                                exit 0
                             else
-                                echo "❌ Integration test failed!"
-                                exit 1
+                                echo "❌ Integration test failed on attempt \$i, retrying..."
+                                sleep 3
                             fi
-                        """
-                    }
+                        done
+
+                        echo "❌ Integration test failed after all attempts!"
+                        exit 1
+                    """
                 }
             }
         }
