@@ -1,6 +1,5 @@
 pipeline {
     agent {
-        agent {
         docker {
             image 'docker:24.0-dind' // Docker-in-Docker image
             args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
@@ -30,9 +29,12 @@ pipeline {
                 script {
                     echo '🔍 Verifying Docker setup...'
                     sh '''
+                        # Start Docker daemon if using DinD
+                        dockerd-entrypoint.sh &
+                        sleep 10
+                        
                         docker --version
                         docker info || echo "Docker info failed"
-                        ls -la /var/run/docker.sock || echo "Socket not found"
                         whoami && id && groups || echo "Group check failed"
                     '''
                 }
@@ -165,11 +167,13 @@ pipeline {
         always {
             echo '🧹 Cleaning up...'
             script {
-                sh """
-                    docker stop test-app || true
-                    docker rm test-app || true
-                    docker system prune -f || true
-                """
+                node {
+                    sh """
+                        docker stop test-app || true
+                        docker rm test-app || true
+                        docker system prune -f || true
+                    """
+                }
             }
             cleanWs()
         }
