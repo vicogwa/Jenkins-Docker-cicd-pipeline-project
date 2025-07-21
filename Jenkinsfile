@@ -1,8 +1,9 @@
 pipeline {
     agent {
+        agent {
         docker {
-            image 'docker:24.0' // Stable Docker CLI image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --group-add docker'
+            image 'docker:24.0-dind' // Docker-in-Docker image
+            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
