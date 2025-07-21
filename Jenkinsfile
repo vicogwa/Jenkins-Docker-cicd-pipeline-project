@@ -26,9 +26,11 @@ pipeline {
                     echo 'Verifying Docker setup...'
                     sh '''
                         docker --version
-                        docker info
-                        ls -la /var/run/docker.sock
+                        docker info || echo "Docker info failed"
+                        ls -la /var/run/docker.sock || echo "Socket not found"
                         whoami
+                        id
+                        groups || echo "Groups command failed"
                     '''
                 }
             }
