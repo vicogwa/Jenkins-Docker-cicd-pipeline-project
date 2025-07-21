@@ -24,18 +24,17 @@ pipeline {
     }
 
     stages {
-        stage('Verify Docker Setup') {
+        stage('Initialize Docker Daemon') {
             steps {
                 script {
-                    echo '🔍 Verifying Docker setup...'
+                    echo '🔍 Initializing Docker daemon...'
                     sh '''
-                        # Start Docker daemon if using DinD
+                        # Start Docker daemon in the background
                         dockerd-entrypoint.sh &
-                        sleep 10
-                        
+                        # Wait for Docker daemon to be ready (up to 30 seconds)
+                        timeout 30s bash -c "until docker info > /dev/null 2>&1; do echo 'Waiting for Docker daemon...'; sleep 2; done"
                         docker --version
-                        docker info || echo "Docker info failed"
-                        whoami && id && groups || echo "Group check failed"
+                        docker info --format '{{.ServerVersion}}' || { echo "Docker daemon failed to start"; exit 1; }
                     '''
                 }
             }
@@ -74,7 +73,12 @@ pipeline {
                 always {
                     script {
                         if (fileExists('test-results/test-results.xml')) {
-                            publishTestResults testResultsPattern: 'test-results/test-results.xml'
+                            // Use standard JUnit plugin if custom step is unavailable
+                            try {
+                                junit 'test-results/test-results.xml'
+                            } catch (Exception e) {
+                                echo "⚠️ Failed to publish test results: ${e.message}"
+                            }
                         } else {
                             echo '⚠️ No test results found'
                         }
@@ -105,7 +109,6 @@ pipeline {
                     sh """
                         docker stop test-app || true
                         docker rm test-app || true
-
                         docker run -d --name test-app -p ${params.APP_PORT}:${params.APP_PORT} \
                         -e ENV=test -e APP_VERSION=${BUILD_NUMBER} \
                         ${IMAGE_TAG}
@@ -130,7 +133,6 @@ pipeline {
                         for i in {1..5}; do
                             response=\$(curl -s http://localhost:${params.APP_PORT}/)
                             echo "Response: \$response"
-
                             if echo "\$response" | grep -q "Hello from CI/CD Pipeline!"; then
                                 echo "✅ Integration test passed!"
                                 exit 0
@@ -139,7 +141,6 @@ pipeline {
                                 sleep 3
                             fi
                         done
-
                         echo "❌ Integration test failed after all attempts!"
                         exit 1
                     """
@@ -168,14 +169,17 @@ pipeline {
             echo '🧹 Cleaning up...'
             script {
                 node {
-                    sh """
+                    sh '''
                         docker stop test-app || true
                         docker rm test-app || true
                         docker system prune -f || true
-                    """
+                    '''
                 }
             }
-            cleanWs()
+            // Ensure cleanWs is executed within a node context
+            node {
+                cleanWs()
+            }
         }
         success {
             echo '✅ Pipeline succeeded!'
