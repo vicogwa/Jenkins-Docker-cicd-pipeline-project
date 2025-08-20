@@ -1,18 +1,13 @@
 pipeline {
-    agent {
-        docker {
-            image 'docker:24.0' // Use a modern Docker CLI image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --group-add docker'
-        }
-    }  
+    agent any   // Run on Jenkins host (Docker must be installed)
 
     environment {
-        APP_NAME = 'sample-app'
+        APP_NAME   = 'sample-app'
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
-        IMAGE_TAG = "${APP_NAME}:${BUILD_NUMBER}"
-        REGISTRY = 'localhost:5000' // Local registry (optional)
+        IMAGE_TAG  = "${APP_NAME}:${BUILD_NUMBER}"
+        REGISTRY   = 'localhost:5000' // Local registry (optional)
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -121,23 +116,27 @@ pipeline {
 
     post {
         always {
-            echo '🧹 Cleaning up Docker containers...'
-            sh '''
-                docker stop test-app || true
-                docker rm test-app || true
-                docker system prune -f || true
-            '''
-            cleanWs()
+            node {
+                echo '🧹 Cleaning up Docker containers...'
+                sh '''
+                    docker stop test-app || true
+                    docker rm test-app || true
+                    docker system prune -f || true
+                '''
+                cleanWs()
+            }
         }
         success {
             echo '🎉 Pipeline succeeded!'
         }
         failure {
-            echo '🔥 Pipeline failed!'
-            sh '''
-                echo "Showing logs of failed container:"
-                docker logs test-app || true
-            '''
+            node {
+                echo '🔥 Pipeline failed!'
+                sh '''
+                    echo "Showing logs of failed container:"
+                    docker logs test-app || true
+                '''
+            }
         }
     }
 }

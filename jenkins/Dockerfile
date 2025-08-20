@@ -31,9 +31,6 @@ USER jenkins
 # Skip initial setup wizard
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
-# Set default admin user
-ENV JENKINS_USER=admin
-ENV JENKINS_PASS=admin123
 
 # Copy custom configuration
 COPY --chown=jenkins:jenkins init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
