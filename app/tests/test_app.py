@@ -3,11 +3,6 @@ import json
 from src.app import app 
 
 
-# Add the parent directory to the path to import app
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from app import app  # Import directly from app.py
-
 class TestApp(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
