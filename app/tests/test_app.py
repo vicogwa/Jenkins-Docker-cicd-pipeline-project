@@ -1,8 +1,7 @@
 import unittest
 import json
-from src.app import app
-import sys
-import os
+from src.app import app 
+
 
 # Add the parent directory to the path to import app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
