@@ -1,6 +1,7 @@
 
 from flask import Flask, jsonify
 import os
+import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
