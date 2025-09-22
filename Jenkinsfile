@@ -1,11 +1,11 @@
 pipeline {
-    agent any   // Run on Jenkins host (Docker must be installed)
+    agent any
 
     environment {
-        APP_NAME   = 'sample-app'
+        APP_NAME     = 'sample-app'
         BUILD_NUMBER = "${env.BUILD_NUMBER}"
-        IMAGE_TAG  = "${APP_NAME}:${BUILD_NUMBER}"
-        REGISTRY   = 'localhost:5000' // Local registry (optional)
+        IMAGE_TAG    = "${APP_NAME}:${BUILD_NUMBER}"
+        REGISTRY     = 'localhost:5000'
     }
 
     stages {
@@ -60,11 +60,7 @@ pipeline {
         stage('Static Code Analysis (SonarQube)') {
             steps {
                 echo '🔍 Running SonarQube analysis...'
-                // Comment out SonarQube for now since it requires additional setup
                 echo 'SonarQube analysis would run here'
-                // withSonarQubeEnv('MySonarQubeServer') {
-                //     sh 'sonar-scanner -Dsonar.projectKey=sample-app -Dsonar.sources=./app -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.login=your-token'
-                // }
             }
         }
 
@@ -74,16 +70,11 @@ pipeline {
                 sh '''
                     docker stop test-app || true
                     docker rm test-app || true
-
                     docker run -d --name test-app -p 5000:5000 \
-                    -e ENV=test -e APP_VERSION=${BUILD_NUMBER} \
-                    ${IMAGE_TAG}
+                        -e ENV=test -e APP_VERSION=${BUILD_NUMBER} \
+                        ${IMAGE_TAG}
                 '''
-
-                echo '⏳ Waiting for app to start...'
                 sleep(time: 10, unit: 'SECONDS')
-
-                echo '🔍 Performing health check...'
                 sh '''
                     for i in {1..5}; do
                         if curl -s http://localhost:5000/health; then
@@ -104,7 +95,6 @@ pipeline {
                 sh '''
                     response=$(curl -s http://localhost:5000/)
                     echo "Response: $response"
-
                     if echo "$response" | grep -q "Hello from CI/CD Pipeline!"; then
                         echo "✅ Integration test passed!"
                     else
@@ -118,7 +108,7 @@ pipeline {
 
     post {
         always {
-            script {
+            node {
                 echo '🧹 Cleaning up Docker containers...'
                 sh '''
                     docker stop test-app || true
@@ -132,7 +122,7 @@ pipeline {
             echo '🎉 Pipeline succeeded!'
         }
         failure {
-            script {
+            node {
                 echo '🔥 Pipeline failed!'
                 sh '''
                     echo "Showing logs of failed container:"
