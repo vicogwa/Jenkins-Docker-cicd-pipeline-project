@@ -4,12 +4,15 @@ services:
   jenkins:
     image: jenkins/jenkins:lts
     container_name: jenkins-server
+    user: root                    # allow package installs & socket access
+    privileged: true              # lets Docker-in-Docker work if needed
     ports:
-      - "8081:8080"       # Jenkins UI
-      - "5001:5001"     # Jenkins agent communication
+      - "8081:8080"               # Jenkins UI
+      - "50000:50000"             # agent communication (keep standard)
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock # Allow Jenkins to talk to Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker      # optional, or install via apt
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
     networks:
@@ -21,7 +24,7 @@ services:
       context: ./app
     container_name: test-environment
     ports:
-      - "5000:5000"       # Expose Flask app
+      - "5000:5000"               # Expose Flask app
     networks:
       - jenkins-network
     depends_on:
